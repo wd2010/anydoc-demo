@@ -2,8 +2,6 @@
 import { ref, onMounted } from 'vue'
 import init, { toMarkdownBytes, formatFromBytes } from '@firecrawl/anydoc-wasm'
 import { isOfd, extractOfdText } from './ofd.js'
-// 以 ?url 形式引用，Vite 只返回资源地址、不会把 50MB 内联进 bundle
-import pdfUrl from './assets/my.pdf?url'
 
 // —— 常量 ——
 const ENGINE = { ANYDOC: 'anydoc', OFD: 'OFD(纯JS)' }
@@ -63,17 +61,6 @@ async function convertBytes(bytes, label) {
   setStatus('done', `${label} 转换完成`)
 }
 
-async function runOnBundledPdf() {
-  setStatus('loading', '正在加载 src/assets/my.pdf（约 50 MB）…')
-  const resp = await fetch(pdfUrl)
-  if (!resp.ok) {
-    setStatus('error', `无法加载 PDF：${resp.status} ${resp.statusText}`)
-    return
-  }
-  const buf = await resp.arrayBuffer()
-  await convertBytes(new Uint8Array(buf), 'my.pdf')
-}
-
 // —— OFD 路径（仅 .ofd 触发，由 ./ofd.js 纯 JS 解析）——
 async function handleOfd(file) {
   engine.value = ENGINE.OFD
@@ -118,7 +105,7 @@ onMounted(async () => {
     errorMsg.value = e?.stack || String(e)
     return
   }
-  await runOnBundledPdf()
+  setStatus('ready', 'WASM 已就绪，请选择本地文件（PDF / Office 或 .ofd）开始解析')
 })
 </script>
 
@@ -133,9 +120,6 @@ onMounted(async () => {
     </header>
 
     <section class="controls">
-      <button :disabled="status === 'loading' || status === 'converting'" @click="runOnBundledPdf">
-        重新解析 src/assets/my.pdf
-      </button>
       <label class="upload">
         选择本地文件测试
         <input type="file" :accept="ACCEPTED" @change="onFileChange" />
